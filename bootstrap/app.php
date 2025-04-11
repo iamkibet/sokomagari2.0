@@ -14,17 +14,22 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__ . '/../routes/console.php',
         health: '/up',
     )
+
+
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->encryptCookies(except: ['appearance']);
+
+        $middleware->alias(['isadmin' => IsAdmin::class]);
 
         $middleware->web(append: [
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
-        ]);
 
-        $middleware->append(IsAdmin::class);
+        ]);
     })
+
+
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();

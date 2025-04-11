@@ -1,34 +1,59 @@
 import { Appearance, useAppearance } from '@/hooks/use-appearance';
 import { cn } from '@/lib/utils';
-import { LucideIcon, Monitor, Moon, Sun } from 'lucide-react';
-import { HTMLAttributes } from 'react';
+import { Monitor, Moon, Sun } from 'lucide-react';
+import { HTMLAttributes, useCallback, useEffect, useState } from 'react';
 
-export default function AppearanceToggleTab({ className = '', ...props }: HTMLAttributes<HTMLDivElement>) {
-    const { appearance, updateAppearance } = useAppearance();
+const THEME_CYCLE: Appearance[] = ['light', 'dark', 'system'];
+const DEFAULT_THEME: Appearance = 'light';
 
-    const tabs: { value: Appearance; icon: LucideIcon; label: string }[] = [
-        { value: 'light', icon: Sun, label: 'Light' },
-        { value: 'dark', icon: Moon, label: 'Dark' },
-        { value: 'system', icon: Monitor, label: 'System' },
-    ];
+type ThemeIconMap = Record<Appearance, typeof Sun | typeof Moon | typeof Monitor>;
+const THEME_ICON_MAP: ThemeIconMap = {
+    light: Sun,
+    dark: Moon,
+    system: Monitor,
+};
+
+interface AppearanceToggleProps extends HTMLAttributes<HTMLButtonElement> {
+   
+    iconClassName?: string;
+}
+
+export default function AppearanceToggle({ className = true, iconClassName, ...props }: AppearanceToggleProps) {
+    const { appearance = DEFAULT_THEME, updateAppearance } = useAppearance();
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => setIsMounted(true), []);
+
+    const getNextTheme = useCallback((currentTheme: Appearance) => {
+        const currentIndex = THEME_CYCLE.indexOf(currentTheme);
+        return THEME_CYCLE[(currentIndex + 1) % THEME_CYCLE.length];
+    }, []);
+
+    const handleToggle = useCallback(() => {
+        const nextTheme = getNextTheme(appearance);
+        updateAppearance?.(nextTheme);
+    }, [appearance, getNextTheme, updateAppearance]);
+
+    const CurrentIcon = THEME_ICON_MAP[appearance];
+    const nextTheme = getNextTheme(appearance);
+    const ariaLabel = `${appearance} theme (switch to ${nextTheme})`;
+
+    if (!isMounted) return null;
 
     return (
-        <div className={cn('inline-flex gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800', className)} {...props}>
-            {tabs.map(({ value, icon: Icon, label }) => (
-                <button
-                    key={value}
-                    onClick={() => updateAppearance(value)}
-                    className={cn(
-                        'flex items-center rounded-md px-3.5 py-1.5 transition-colors',
-                        appearance === value
-                            ? 'bg-white shadow-xs dark:bg-neutral-700 dark:text-neutral-100'
-                            : 'text-neutral-500 hover:bg-neutral-200/60 hover:text-black dark:text-neutral-400 dark:hover:bg-neutral-700/60',
-                    )}
-                >
-                    <Icon className="-ml-1 h-4 w-4" />
-                    <span className="ml-1.5 text-sm">{label}</span>
-                </button>
-            ))}
-        </div>
+        <button
+            type="button"
+            aria-label={ariaLabel}
+            onClick={handleToggle}
+            className={cn(
+                'flex items-center gap-2 rounded-lg p-2',
+                'transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800',
+                'focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:focus:ring-neutral-600',
+                className,
+            )}
+            {...props}
+        >
+            <CurrentIcon className={cn('h-5 w-5 transition-transform hover:scale-110', iconClassName)} aria-hidden="true" />
+        </button>
     );
 }
